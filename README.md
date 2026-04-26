@@ -1,68 +1,49 @@
-# Follow Up Local Web App
+# Follow Up Local Web App V2
 
-This is the no-Mac, no-App-Store version of the follow-up app.
+This version adds backup, CSV export, JSON backup, CSV/JSON import, and clear-device data controls.
 
-It runs as a mobile-friendly web app and saves data locally on the device.
+## New in this version
 
-## What it does
+- Tools tab
+- Export Leads CSV
+- Download Full Backup as JSON
+- Import CSV backup
+- Import JSON backup
+- Clear all local leads
+- Preserves existing V1 leads automatically if already stored in the browser
 
-- Add leads
-- View today and overdue follow-ups
-- Search leads
-- Filter by status
-- Call, text, or email from the lead detail page
-- Mark follow-up complete
-- Test a follow-up immediately
-- Edit and delete leads
-- Save data locally in the browser
+## Important
 
-## Important local-only note
+This is still local-only.
 
-Data is saved on the device/browser where the app is used.
+Each phone or computer has its own leads until we connect Supabase or another shared database.
 
-That means:
+## How to update GitHub Pages
 
-- Leads on your phone stay on your phone
-- Leads on your computer stay on your computer
-- Clearing browser data can erase the leads
-- This version does not sync between people yet
+1. Unzip this folder.
+2. Go to your GitHub repository.
+3. Upload and replace:
+   - index.html
+   - styles.css
+   - app.js
+   - manifest.json
+   - service-worker.js
+   - icon-192.png
+   - icon-512.png
+4. Commit changes.
+5. Open the app link.
+6. If the old version still shows, refresh once or close and reopen the Home Screen app.
 
-That is intentional for version 1.
+## Best testing process
 
-## How to use on iPhone
+1. Add a few test leads.
+2. Go to Tools.
+3. Export CSV.
+4. Download Full Backup.
+5. Clear all leads.
+6. Import the CSV or JSON backup.
+7. Confirm leads return.
 
-The easiest way is to upload this folder to any simple web host.
+## Next upgrade
 
-Good options:
-
-- GitHub Pages
-- Netlify
-- Your own website folder
-- Cloudflare Pages
-
-Once it is online:
-
-1. Open the app link in Safari on your iPhone.
-2. Tap the Share button.
-3. Tap Add to Home Screen.
-4. Name it Follow Up.
-5. Tap Add.
-
-Now it appears like an app icon on your phone.
-
-## How to test on Windows first
-
-1. Open the folder.
-2. Double-click `index.html`.
-3. It will open in your browser.
-4. Add a sample lead and test the workflow.
-
-Some offline app features work best once the app is hosted online, but the basic app works locally.
-
-## Recommended next upgrades
-
-1. CSV import/export.
-2. Real notifications.
-3. Shared desktop/mobile schema.
-4. Cloud sync.
-5. Team login.
+Supabase sync will let the desktop and phone share the same data.
