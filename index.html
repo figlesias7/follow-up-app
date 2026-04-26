@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="theme-color" content="#111827" />
   <title>Follow Up App</title>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <div class="app-shell">
@@ -61,6 +61,16 @@
           <h3>Import Leads</h3>
           <input id="importFileInput" type="file" accept=".csv,.json" />
           <button id="importBtn" class="secondary-btn" type="button">Import Selected File</button>
+
+          <hr />
+
+          <h3>Notifications</h3>
+          <p class="muted-text">Enable reminders for due and overdue follow-ups on this device.</p>
+          <button id="enableNotificationsBtn" class="secondary-btn" type="button">Enable Notifications</button>
+          <button id="testNotificationBtn" class="secondary-btn" type="button">Test Notification</button>
+          <button id="checkNotificationsBtn" class="secondary-btn" type="button">Check Due Follow-Ups Now</button>
+          <p id="notificationStatusText" class="muted-text"></p>
+
           <hr />
           <h3>Danger Zone</h3>
           <button id="clearAllBtn" class="delete-btn" type="button">Clear All Leads From Supabase</button>
@@ -114,6 +124,6 @@
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

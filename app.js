@@ -5,6 +5,146 @@ let supabaseClient = null;
 const state = { leads: [], currentView: "todayView", selectedLeadId: null };
 const $ = (id) => document.getElementById(id);
 
+const NOTIFICATION_PREF_KEY = "followUpNotificationsEnabled";
+const NOTIFICATION_SENT_KEY_PREFIX = "followUpNotificationSent:";
+
+let notificationRegistration = null;
+
+function isNotificationSupported() {
+  return "Notification" in window;
+}
+
+function notificationsEnabled() {
+  return localStorage.getItem(NOTIFICATION_PREF_KEY) === "true" && isNotificationSupported() && Notification.permission === "granted";
+}
+
+function updateNotificationStatus() {
+  const el = $("notificationStatusText");
+  if (!el) return;
+
+  if (!isNotificationSupported()) {
+    el.textContent = "Notifications are not supported in this browser.";
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    el.textContent = "Notifications are enabled on this device.";
+  } else if (Notification.permission === "denied") {
+    el.textContent = "Notifications are blocked. Change browser or phone settings to allow them.";
+  } else {
+    el.textContent = "Notifications are not enabled yet.";
+  }
+}
+
+async function registerNotificationWorker() {
+  if (!("serviceWorker" in navigator)) return null;
+
+  try {
+    notificationRegistration = await navigator.serviceWorker.register("notification-sw.js?v=6");
+    return notificationRegistration;
+  } catch (error) {
+    console.warn("Notification worker registration failed:", error);
+    return null;
+  }
+}
+
+async function enableNotifications() {
+  if (!isNotificationSupported()) {
+    alert("Notifications are not supported in this browser.");
+    updateNotificationStatus();
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    localStorage.setItem(NOTIFICATION_PREF_KEY, "true");
+    await registerNotificationWorker();
+    updateNotificationStatus();
+    alert("Notifications enabled for this device.");
+    checkDueNotifications(true);
+  } else {
+    localStorage.setItem(NOTIFICATION_PREF_KEY, "false");
+    updateNotificationStatus();
+    alert("Notifications were not enabled.");
+  }
+}
+
+async function showFollowUpNotification(title, body) {
+  if (!notificationsEnabled()) return;
+
+  try {
+    if (notificationRegistration && notificationRegistration.showNotification) {
+      await notificationRegistration.showNotification(title, {
+        body,
+        tag: "follow-up-reminder",
+        renotify: true,
+        icon: "icon-192.png",
+        badge: "icon-192.png"
+      });
+      return;
+    }
+
+    new Notification(title, {
+      body,
+      tag: "follow-up-reminder"
+    });
+  } catch (error) {
+    console.warn("Notification failed:", error);
+  }
+}
+
+function notificationSentKey(lead) {
+  return `${NOTIFICATION_SENT_KEY_PREFIX}${todayISO()}:${lead.id}`;
+}
+
+function wasNotificationSentToday(lead) {
+  return localStorage.getItem(notificationSentKey(lead)) === "true";
+}
+
+function markNotificationSentToday(lead) {
+  localStorage.setItem(notificationSentKey(lead), "true");
+}
+
+async function testNotification() {
+  if (!notificationsEnabled()) {
+    await enableNotifications();
+    if (!notificationsEnabled()) return;
+  }
+
+  await showFollowUpNotification("Follow Up test", "If you see this, notifications are working on this device.");
+}
+
+async function checkDueNotifications(force = false) {
+  if (!notificationsEnabled()) {
+    updateNotificationStatus();
+    return;
+  }
+
+  const dueLeads = state.leads.filter(isDue);
+
+  if (!dueLeads.length) {
+    if (force) {
+      await showFollowUpNotification("No follow-ups due", "You are clear right now.");
+    }
+    return;
+  }
+
+  const unnotified = dueLeads.filter(lead => force || !wasNotificationSentToday(lead));
+
+  if (!unnotified.length) return;
+
+  const first = unnotified[0];
+  const extraCount = dueLeads.length - 1;
+  const title = dueLeads.length === 1 ? "Follow-up due" : `${dueLeads.length} follow-ups due`;
+  const body = `${first.name || "Unnamed Lead"}${extraCount > 0 ? ` and ${extraCount} more` : ""}`;
+
+  await showFollowUpNotification(title, body);
+
+  unnotified.forEach(markNotificationSentToday);
+}
+
+
 const CADENCE_RULES = {
   "Attorney": { days: [0, 14, 30], repeatEvery: 45 },
   "Buyer": { days: [0, 3, 7, 14, 30], repeatEvery: 30 },
@@ -61,6 +201,8 @@ function initApp() {
 
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   wireEvents();
+  registerNotificationWorker();
+  updateNotificationStatus();
   $("followUpDate").value = todayISO();
   loadLeads();
 }
@@ -85,6 +227,7 @@ async function loadLeads(){
   if(error){ alert("Could not load leads: " + error.message); console.error(error); return; }
   state.leads = (data || []).map(dbToLead);
   render();
+  checkDueNotifications(false);
 }
 
 async function saveLeadToDB(lead){
@@ -272,7 +415,7 @@ async function clearAllLeads(){
 }
 
 function wireEvents(){
-  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn"];
+  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","enableNotificationsBtn","testNotificationBtn","checkNotificationsBtn"];
   const missing=ids.filter(id=>!$(id));
   if(missing.length){ alert("Missing HTML elements: " + missing.join(", ")); return; }
   $("todayTab").onclick=()=>showView("todayView");
@@ -290,4 +433,14 @@ function wireEvents(){
   $("importBtn").onclick=importFile;
   $("clearAllBtn").onclick=clearAllLeads;
   $("refreshBtn").onclick=loadLeads;
+  $("enableNotificationsBtn").onclick=enableNotifications;
+  $("testNotificationBtn").onclick=testNotification;
+  $("checkNotificationsBtn").onclick=()=>checkDueNotifications(true);
 }
+
+
+setInterval(() => {
+  if (state.leads && state.leads.length) {
+    checkDueNotifications(false);
+  }
+}, 15 * 60 * 1000);
