@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="theme-color" content="#111827" />
   <title>Follow Up App</title>
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <div class="app-shell">
@@ -31,13 +31,15 @@
         <div class="search-filter">
           <input id="searchInput" type="search" placeholder="Search leads..." />
           <select id="statusFilter">
-            <option value="">All Statuses</option>
-            <option value="New">New</option>
-            <option value="Contacted">Contacted</option>
-            <option value="Follow-Up Needed">Follow-Up Needed</option>
-            <option value="Appointment Set">Appointment Set</option>
-            <option value="Closed">Closed</option>
-            <option value="Dead">Dead</option>
+            <option value="">All Contact Types</option>
+            <option value="Attorney">Attorney</option>
+            <option value="Buyer">Buyer</option>
+            <option value="Contractor">Contractor</option>
+            <option value="Private Lender">Private Lender</option>
+            <option value="Realtor">Realtor</option>
+            <option value="Seller Lead">Seller Lead</option>
+            <option value="Title Company">Title Company</option>
+            <option value="Wholesaler">Wholesaler</option>
           </select>
         </div>
         <div id="leadList" class="list"></div>
@@ -76,14 +78,16 @@
           <label>Phone<input id="phone" type="tel" placeholder="5551234567" /></label>
           <label>Email<input id="email" type="email" placeholder="seller@email.com" /></label>
           <label>Property Address<input id="propertyAddress" type="text" placeholder="123 Main St, City, ST" /></label>
-          <label>Status
-            <select id="status">
-              <option>New</option>
-              <option>Contacted</option>
-              <option>Follow-Up Needed</option>
-              <option>Appointment Set</option>
-              <option>Closed</option>
-              <option>Dead</option>
+          <label>Contact Type
+            <select id="contactType">
+              <option value="Attorney">Attorney</option>
+              <option value="Buyer">Buyer</option>
+              <option value="Contractor">Contractor</option>
+              <option value="Private Lender">Private Lender</option>
+              <option value="Realtor">Realtor</option>
+              <option value="Seller Lead">Seller Lead</option>
+              <option value="Title Company">Title Company</option>
+              <option value="Wholesaler">Wholesaler</option>
             </select>
           </label>
           <label>Follow-Up Date<input id="followUpDate" type="date" /></label>
@@ -110,6 +114,6 @@
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
