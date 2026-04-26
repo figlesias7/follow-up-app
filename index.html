@@ -3,14 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="theme-color" content="#111827" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Follow Up" />
   <title>Follow Up App</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <div class="app-shell">
@@ -49,11 +45,11 @@
 
       <section id="toolsView" class="view">
         <div class="section-title-row">
-          <h2>Backup & Import</h2>
+          <h2>Tools</h2>
         </div>
         <div class="card tools-card">
           <h3>Shared Database</h3>
-          <p class="muted-text">This version syncs leads through Supabase. Phone and desktop should show the same data.</p>
+          <p class="muted-text">This version syncs through Supabase.</p>
           <button id="refreshBtn" class="secondary-btn" type="button">Refresh From Supabase</button>
           <hr />
           <h3>Backup</h3>
@@ -61,7 +57,6 @@
           <button id="exportJsonBtn" class="secondary-btn" type="button">Download Full Backup</button>
           <hr />
           <h3>Import Leads</h3>
-          <p class="muted-text">Import a CSV or JSON backup. Matching lead IDs update existing leads. New rows are added.</p>
           <input id="importFileInput" type="file" accept=".csv,.json" />
           <button id="importBtn" class="secondary-btn" type="button">Import Selected File</button>
           <hr />
@@ -114,7 +109,7 @@
     </nav>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
