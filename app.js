@@ -5,6 +5,52 @@ let supabaseClient = null;
 const state = { leads: [], currentView: "todayView", selectedLeadId: null };
 const $ = (id) => document.getElementById(id);
 
+const CADENCE_RULES = {
+  "Attorney": { days: [0, 14, 30], repeatEvery: 45 },
+  "Buyer": { days: [0, 3, 7, 14, 30], repeatEvery: 30 },
+  "Contractor": { days: [0, 7, 30], repeatEvery: 45 },
+  "Private Lender": { days: [0, 7, 21, 45], repeatEvery: 45 },
+  "Realtor": { days: [0, 3, 7, 14, 30], repeatEvery: 30 },
+  "Seller Lead": { days: [0, 1, 2, 4, 7, 14, 21, 30], repeatEvery: 30 },
+  "Title Company": { days: [0, 14, 30], repeatEvery: 45 },
+  "Wholesaler": { days: [0, 7, 14, 30], repeatEvery: 45 }
+};
+
+function getCadenceRule(contactType) {
+  return CADENCE_RULES[contactType] || CADENCE_RULES["Seller Lead"];
+}
+
+function addDaysISO(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function getNextFollowUpFromCadence(lead) {
+  const contactType = lead.contactType || lead.status || "Seller Lead";
+  const rule = getCadenceRule(contactType);
+  const currentStep = Number.isFinite(Number(lead.cadenceStep)) ? Number(lead.cadenceStep) : 0;
+  const currentCadenceDay = rule.days[Math.min(currentStep, rule.days.length - 1)] || 0;
+  const nextStep = currentStep + 1;
+
+  if (nextStep < rule.days.length) {
+    const nextCadenceDay = rule.days[nextStep];
+    const intervalDays = Math.max(1, nextCadenceDay - currentCadenceDay);
+    return {
+      followUpDate: addDaysISO(intervalDays),
+      cadenceStep: nextStep,
+      cadenceLabel: `Next step: day ${nextCadenceDay}`
+    };
+  }
+
+  return {
+    followUpDate: addDaysISO(rule.repeatEvery),
+    cadenceStep: nextStep,
+    cadenceLabel: `Repeating every ${rule.repeatEvery} days`
+  };
+}
+
+
 document.addEventListener("DOMContentLoaded", initApp);
 
 function initApp() {
@@ -27,11 +73,11 @@ function generateId(){ return crypto.randomUUID ? crypto.randomUUID() : String(D
 function escapeHTML(value){ return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
 function dbToLead(row){
-  return { id:row.id, name:row.name||"", phone:row.phone||"", email:row.email||"", propertyAddress:row.property_address||"", contactType:row.contact_type || row.status || "Seller Lead", status:row.contact_type || row.status || "Seller Lead", followUpDate:row.follow_up_date||todayISO(), notes:row.notes||"", lastCompletedFollowUp:row.last_completed_follow_up||"", createdAt:row.created_at||"", updatedAt:row.updated_at||"" };
+  return { id:row.id, name:row.name||"", phone:row.phone||"", email:row.email||"", propertyAddress:row.property_address||"", contactType:row.contact_type || row.status || "Seller Lead", status:row.contact_type || row.status || "Seller Lead", followUpDate:row.follow_up_date||todayISO(), notes:row.notes||"", lastCompletedFollowUp:row.last_completed_follow_up||"", createdAt:row.created_at||"", updatedAt:row.updated_at||"", cadenceStep:row.cadence_step ?? 0 };
 }
 
 function leadToDB(lead){
-  return { id:lead.id, name:lead.name||"", phone:lead.phone||"", email:lead.email||"", property_address:lead.propertyAddress||"", contact_type:lead.contactType || lead.status || "Seller Lead", status:lead.contactType || lead.status || "Seller Lead", follow_up_date:lead.followUpDate||todayISO(), notes:lead.notes||"", last_completed_follow_up:lead.lastCompletedFollowUp||null, updated_at:new Date().toISOString() };
+  return { id:lead.id, name:lead.name||"", phone:lead.phone||"", email:lead.email||"", property_address:lead.propertyAddress||"", contact_type:lead.contactType || lead.status || "Seller Lead", status:lead.contactType || lead.status || "Seller Lead", follow_up_date:lead.followUpDate||todayISO(), notes:lead.notes||"", last_completed_follow_up:lead.lastCompletedFollowUp||null, updated_at:new Date().toISOString(), cadence_step:Number.isFinite(Number(lead.cadenceStep)) ? Number(lead.cadenceStep) : 0 };
 }
 
 async function loadLeads(){
@@ -105,7 +151,7 @@ function renderDetail(id){
   if(!lead) return;
   $("detailName").textContent = lead.name || "Lead Detail";
   const cleanPhone = (lead.phone || "").replace(/\D/g, "");
-  $("detailCard").innerHTML = `<div class="detail-field"><div class="detail-label">Address</div><div class="detail-value">${escapeHTML(lead.propertyAddress || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Phone</div><div class="detail-value">${escapeHTML(lead.phone || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Email</div><div class="detail-value">${escapeHTML(lead.email || "Not entered")}</div></div><div class="action-grid"><a href="${cleanPhone ? `tel:${cleanPhone}` : "#"}">Call</a><a href="${cleanPhone ? `sms:${cleanPhone}` : "#"}">Text</a><a href="${lead.email ? `mailto:${lead.email}` : "#"}">Email</a></div><div class="detail-field"><div class="detail-label">Contact Type</div><div class="detail-value">${escapeHTML(lead.contactType || lead.status)}</div></div><div class="detail-field"><div class="detail-label">Follow-Up Date</div><div class="detail-value">${formatDate(lead.followUpDate)}</div></div><div class="detail-field"><div class="detail-label">Last Completed</div><div class="detail-value">${lead.lastCompletedFollowUp ? formatDate(lead.lastCompletedFollowUp) : "No completed follow-up yet"}</div></div><div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value">${escapeHTML(lead.notes || "No notes yet")}</div></div><div class="detail-actions"><button class="complete-btn" onclick="markComplete('${lead.id}')" type="button">Mark Complete + Tomorrow</button><button class="warning-btn" onclick="testFollowUpNow('${lead.id}')" type="button">Test Follow-Up Now</button><button class="edit-btn" onclick="editLead('${lead.id}')" type="button">Edit Lead</button><button class="delete-btn" onclick="deleteLead('${lead.id}')" type="button">Delete Lead</button></div>`;
+  $("detailCard").innerHTML = `<div class="detail-field"><div class="detail-label">Address</div><div class="detail-value">${escapeHTML(lead.propertyAddress || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Phone</div><div class="detail-value">${escapeHTML(lead.phone || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Email</div><div class="detail-value">${escapeHTML(lead.email || "Not entered")}</div></div><div class="action-grid"><a href="${cleanPhone ? `tel:${cleanPhone}` : "#"}">Call</a><a href="${cleanPhone ? `sms:${cleanPhone}` : "#"}">Text</a><a href="${lead.email ? `mailto:${lead.email}` : "#"}">Email</a></div><div class="detail-field"><div class="detail-label">Contact Type</div><div class="detail-value">${escapeHTML(lead.contactType || lead.status)}</div></div><div class="detail-field"><div class="detail-label">Follow-Up Date</div><div class="detail-value">${formatDate(lead.followUpDate)}</div></div><div class="detail-field"><div class="detail-label">Cadence Step</div><div class="detail-value">${Number(lead.cadenceStep || 0) + 1}</div></div><div class="detail-field"><div class="detail-label">Last Completed</div><div class="detail-value">${lead.lastCompletedFollowUp ? formatDate(lead.lastCompletedFollowUp) : "No completed follow-up yet"}</div></div><div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value">${escapeHTML(lead.notes || "No notes yet")}</div></div><div class="detail-actions"><button class="complete-btn" onclick="markComplete('${lead.id}')" type="button">Mark Complete + Tomorrow</button><button class="warning-btn" onclick="testFollowUpNow('${lead.id}')" type="button">Test Follow-Up Now</button><button class="edit-btn" onclick="editLead('${lead.id}')" type="button">Edit Lead</button><button class="delete-btn" onclick="deleteLead('${lead.id}')" type="button">Delete Lead</button></div>`;
 }
 
 function openAddForm(){
@@ -136,7 +182,7 @@ async function saveForm(event){
   event.preventDefault();
   const id = $("leadId").value || generateId();
   const oldLead = state.leads.find(item => item.id === id);
-  const lead = { id, name:$("name").value.trim(), phone:$("phone").value.trim(), email:$("email").value.trim(), propertyAddress:$("propertyAddress").value.trim(), contactType:$("contactType").value, status:$("contactType").value, followUpDate:$("followUpDate").value || todayISO(), notes:$("notes").value.trim(), lastCompletedFollowUp:oldLead?.lastCompletedFollowUp || "", createdAt:oldLead?.createdAt || new Date().toISOString(), updatedAt:new Date().toISOString() };
+  const lead = { id, name:$("name").value.trim(), phone:$("phone").value.trim(), email:$("email").value.trim(), propertyAddress:$("propertyAddress").value.trim(), contactType:$("contactType").value, status:$("contactType").value, followUpDate:$("followUpDate").value || todayISO(), notes:$("notes").value.trim(), lastCompletedFollowUp:oldLead?.lastCompletedFollowUp || "", createdAt:oldLead?.createdAt || new Date().toISOString(), updatedAt:new Date().toISOString(), cadenceStep:oldLead?.cadenceStep ?? 0 };
   const saved = await saveLeadToDB(lead);
   if(!saved) return;
   await loadLeads();
@@ -147,27 +193,36 @@ async function saveForm(event){
 async function markComplete(id){
   const lead = state.leads.find(item => item.id === id);
   if(!lead) return;
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const next = getNextFollowUpFromCadence(lead);
+
   lead.lastCompletedFollowUp = todayISO();
-  lead.followUpDate = tomorrow.toISOString().slice(0,10);
+  lead.followUpDate = next.followUpDate;
+  lead.cadenceStep = next.cadenceStep;
+
   const saved = await saveLeadToDB(lead);
   if(!saved) return;
+
   await loadLeads();
   state.selectedLeadId = id;
   showView("detailView");
+  alert(`Follow-up completed. ${next.cadenceLabel}. Next follow-up: ${formatDate(next.followUpDate)}.`);
 }
 
 async function testFollowUpNow(id){
   const lead = state.leads.find(item => item.id === id);
   if(!lead) return;
+
   lead.followUpDate = todayISO();
+  lead.cadenceStep = 0;
+
   const saved = await saveLeadToDB(lead);
   if(!saved) return;
+
   await loadLeads();
   state.selectedLeadId = id;
   showView("detailView");
-  alert("Test follow-up triggered. This lead is now due today.");
+  alert("Test follow-up triggered. This lead is now due today and cadence step was reset to 1.");
 }
 
 async function deleteLead(id){
@@ -181,7 +236,7 @@ async function deleteLead(id){
 
 function csvEscape(value){ const str = String(value ?? ""); return /[",\n\r]/.test(str) ? `"${str.replaceAll('"','""')}"` : str; }
 function downloadTextFile(content, filename, type){ const blob = new Blob([content],{type}); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href=url; link.download=filename; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); }
-function exportCSV(){ const headers=["id","name","phone","email","propertyAddress","contactType","status","followUpDate","lastCompletedFollowUp","createdAt","updatedAt","notes"]; const rows=state.leads.map(lead=>headers.map(h=>csvEscape(lead[h])).join(",")); downloadTextFile([headers.join(","),...rows].join("\n"),`follow-up-leads-${todayISO()}.csv`,"text/csv"); }
+function exportCSV(){ const headers=["id","name","phone","email","propertyAddress","contactType","status","followUpDate","lastCompletedFollowUp","createdAt","updatedAt","cadenceStep","notes"]; const rows=state.leads.map(lead=>headers.map(h=>csvEscape(lead[h])).join(",")); downloadTextFile([headers.join(","),...rows].join("\n"),`follow-up-leads-${todayISO()}.csv`,"text/csv"); }
 function exportJSON(){ downloadTextFile(JSON.stringify({app:"Follow Up App",version:"supabase-nocache",exportedAt:new Date().toISOString(),leads:state.leads},null,2),`follow-up-backup-${todayISO()}.json`,"application/json"); }
 
 function parseCSV(text){
@@ -200,7 +255,7 @@ async function importFile(){
       if(file.name.toLowerCase().endsWith(".json")){ const parsed=JSON.parse(reader.result); importedLeads=Array.isArray(parsed)?parsed:parsed.leads||[]; }
       else { const rows=parseCSV(reader.result); const headers=rows.shift().map(h=>h.trim()); importedLeads=rows.map(row=>{ const item={}; headers.forEach((h,i)=>item[h]=row[i]||""); return item; }); }
       for(const item of importedLeads){
-        const lead = { id:item.id||generateId(), name:item.name||"", phone:item.phone||"", email:item.email||"", propertyAddress:item.propertyAddress||item.property_address||"", contactType:item.contactType||item.contact_type||item.status||"Seller Lead", status:item.contactType||item.contact_type||item.status||"Seller Lead", followUpDate:item.followUpDate||item.follow_up_date||todayISO(), notes:item.notes||"", lastCompletedFollowUp:item.lastCompletedFollowUp||item.last_completed_follow_up||"" };
+        const lead = { id:item.id||generateId(), name:item.name||"", phone:item.phone||"", email:item.email||"", propertyAddress:item.propertyAddress||item.property_address||"", contactType:item.contactType||item.contact_type||item.status||"Seller Lead", status:item.contactType||item.contact_type||item.status||"Seller Lead", followUpDate:item.followUpDate||item.follow_up_date||todayISO(), notes:item.notes||"", lastCompletedFollowUp:item.lastCompletedFollowUp||item.last_completed_follow_up||"", cadenceStep:item.cadenceStep||item.cadence_step||0 };
         const saved = await saveLeadToDB(lead); if(!saved) return;
       }
       await loadLeads(); alert(`Import complete. Imported ${importedLeads.length} lead(s).`); showView("leadsView");
