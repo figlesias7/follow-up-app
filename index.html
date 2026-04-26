@@ -19,7 +19,7 @@
         <h1>Follow Up</h1>
         <p id="todayText"></p>
       </div>
-      <button id="addLeadTopBtn" class="primary-small">+ Lead</button>
+      <button id="addLeadTopBtn" class="primary-small" type="button">+ Lead</button>
     </header>
 
     <main>
@@ -52,25 +52,28 @@
           <h2>Backup & Import</h2>
         </div>
         <div class="card tools-card">
-          <h3>Protect Your Leads</h3>
-          <p class="muted-text">This version saves leads on this device. Export a backup before clearing browser data, switching phones, or testing updates.</p>
-          <button id="exportCsvBtn" class="primary">Export Leads CSV</button>
-          <button id="exportJsonBtn" class="secondary-btn">Download Full Backup</button>
+          <h3>Shared Database</h3>
+          <p class="muted-text">This version syncs leads through Supabase. Phone and desktop should show the same data.</p>
+          <button id="refreshBtn" class="secondary-btn" type="button">Refresh From Supabase</button>
+          <hr />
+          <h3>Backup</h3>
+          <button id="exportCsvBtn" class="primary" type="button">Export Leads CSV</button>
+          <button id="exportJsonBtn" class="secondary-btn" type="button">Download Full Backup</button>
           <hr />
           <h3>Import Leads</h3>
           <p class="muted-text">Import a CSV or JSON backup. Matching lead IDs update existing leads. New rows are added.</p>
           <input id="importFileInput" type="file" accept=".csv,.json" />
-          <button id="importBtn" class="secondary-btn">Import Selected File</button>
+          <button id="importBtn" class="secondary-btn" type="button">Import Selected File</button>
           <hr />
           <h3>Danger Zone</h3>
-          <button id="clearAllBtn" class="delete-btn">Clear All Leads On This Device</button>
+          <button id="clearAllBtn" class="delete-btn" type="button">Clear All Leads From Supabase</button>
         </div>
       </section>
 
       <section id="formView" class="view">
         <div class="section-title-row">
           <h2 id="formTitle">Add Lead</h2>
-          <button id="cancelFormBtn" class="ghost">Cancel</button>
+          <button id="cancelFormBtn" class="ghost" type="button">Cancel</button>
         </div>
         <form id="leadForm" class="card form-card">
           <input type="hidden" id="leadId" />
@@ -97,20 +100,21 @@
       <section id="detailView" class="view">
         <div class="section-title-row">
           <h2 id="detailName">Lead Detail</h2>
-          <button id="backToLeadsBtn" class="ghost">Back</button>
+          <button id="backToLeadsBtn" class="ghost" type="button">Back</button>
         </div>
         <div id="detailCard" class="card"></div>
       </section>
     </main>
 
     <nav class="bottom-nav">
-      <button id="todayTab" class="nav-btn active">Today</button>
-      <button id="leadsTab" class="nav-btn">Leads</button>
-      <button id="toolsTab" class="nav-btn">Tools</button>
-      <button id="addLeadBottomBtn" class="nav-btn add">Add</button>
+      <button id="todayTab" class="nav-btn active" type="button">Today</button>
+      <button id="leadsTab" class="nav-btn" type="button">Leads</button>
+      <button id="toolsTab" class="nav-btn" type="button">Tools</button>
+      <button id="addLeadBottomBtn" class="nav-btn add" type="button">Add</button>
     </nav>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>  
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
