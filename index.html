@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Follow Up" />
+
+  <title>Follow Up App</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>Follow Up</h1>
+        <p id="todayText"></p>
+      </div>
+      <button id="addLeadTopBtn" class="primary-small">+ Lead</button>
+    </header>
+
+    <main>
+      <section id="todayView" class="view active">
+        <div class="section-title-row">
+          <h2>Today & Overdue</h2>
+          <span id="dueCount" class="badge">0</span>
+        </div>
+
+        <div id="todayList" class="list"></div>
+      </section>
+
+      <section id="leadsView" class="view">
+        <div class="search-filter">
+          <input id="searchInput" type="search" placeholder="Search leads..." />
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Follow-Up Needed">Follow-Up Needed</option>
+            <option value="Appointment Set">Appointment Set</option>
+            <option value="Closed">Closed</option>
+            <option value="Dead">Dead</option>
+          </select>
+        </div>
+
+        <div id="leadList" class="list"></div>
+      </section>
+
+      <section id="formView" class="view">
+        <div class="section-title-row">
+          <h2 id="formTitle">Add Lead</h2>
+          <button id="cancelFormBtn" class="ghost">Cancel</button>
+        </div>
+
+        <form id="leadForm" class="card form-card">
+          <input type="hidden" id="leadId" />
+
+          <label>Name
+            <input id="name" type="text" placeholder="Seller name" />
+          </label>
+
+          <label>Phone
+            <input id="phone" type="tel" placeholder="5551234567" />
+          </label>
+
+          <label>Email
+            <input id="email" type="email" placeholder="seller@email.com" />
+          </label>
+
+          <label>Property Address
+            <input id="propertyAddress" type="text" placeholder="123 Main St, City, ST" />
+          </label>
+
+          <label>Status
+            <select id="status">
+              <option>New</option>
+              <option>Contacted</option>
+              <option>Follow-Up Needed</option>
+              <option>Appointment Set</option>
+              <option>Closed</option>
+              <option>Dead</option>
+            </select>
+          </label>
+
+          <label>Follow-Up Date
+            <input id="followUpDate" type="date" />
+          </label>
+
+          <label>Notes
+            <textarea id="notes" rows="6" placeholder="Conversation notes, motivation, next steps..."></textarea>
+          </label>
+
+          <button type="submit" class="primary">Save Lead</button>
+        </form>
+      </section>
+
+      <section id="detailView" class="view">
+        <div class="section-title-row">
+          <h2 id="detailName">Lead Detail</h2>
+          <button id="backToLeadsBtn" class="ghost">Back</button>
+        </div>
+
+        <div id="detailCard" class="card"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button id="todayTab" class="nav-btn active">Today</button>
+      <button id="leadsTab" class="nav-btn">Leads</button>
+      <button id="addLeadBottomBtn" class="nav-btn add">Add</button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
