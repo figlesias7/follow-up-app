@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="theme-color" content="#111827" />
   <title>Follow Up App</title>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 
   <style>
     .global-search-bar {
@@ -20,15 +20,61 @@
     }
   </style>
 
+
+  <style>
+    .login-view {
+      display: none;
+      min-height: 100vh;
+      padding: 24px 18px;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-view.active {
+      display: flex;
+    }
+    .login-card {
+      width: 100%;
+      display: grid;
+      gap: 14px;
+    }
+    .app-locked header,
+    .app-locked main,
+    .app-locked nav {
+      display: none;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-logout {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+  </style>
+
 </head>
 <body>
   <div class="app-shell">
+
+    <section id="loginView" class="login-view">
+      <div class="card login-card">
+        <h2>Login Required</h2>
+        <p class="muted-text">Enter your email and Supabase will send you a secure login link.</p>
+        <label>Email
+          <input id="loginEmail" type="email" placeholder="you@example.com" />
+        </label>
+        <button id="sendMagicLinkBtn" class="primary" type="button">Send Login Link</button>
+        <p id="loginMessage" class="muted-text"></p>
+      </div>
+    </section>
+
     <header class="app-header">
       <div>
         <h1>Follow Up</h1>
         <p id="todayText"></p>
       </div>
-      <button id="addLeadTopBtn" class="primary-small" type="button">+ Lead</button>
+      <div class="header-actions"><button id="logoutBtn" class="ghost header-logout" type="button">Logout</button><button id="addLeadTopBtn" class="primary-small" type="button">+ Lead</button></div>
     </header>
 
     <main>
@@ -137,6 +183,6 @@
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

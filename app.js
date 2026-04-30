@@ -2,8 +2,76 @@ const SUPABASE_URL = "https://bkmrcmwmupnfcjequjlm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrbXJjbXdtdXBuZmNqZXF1amxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNzc0NjIsImV4cCI6MjA5Mjc1MzQ2Mn0.3T4cc9b-fgyQvpACHof_v03cV7hNM2BwlIOBp3gnnDY";
 
 let supabaseClient = null;
-const state = { leads: [], currentView: "todayView", selectedLeadId: null };
+const state = { leads: [], currentView: "todayView", selectedLeadId: null, session: null };
 const $ = (id) => document.getElementById(id);
+
+function getRedirectURL() {
+  return window.location.origin + window.location.pathname;
+}
+
+async function checkSession() {
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error("Session error:", error);
+    showLoggedOut("Could not check login session.");
+    return;
+  }
+
+  state.session = data.session;
+
+  if (state.session) {
+    showLoggedIn();
+    await loadLeads();
+  } else {
+    showLoggedOut();
+  }
+}
+
+function showLoggedOut(message = "") {
+  document.body.classList.add("app-locked");
+  $("loginView").classList.add("active");
+  if ($("loginMessage")) $("loginMessage").textContent = message;
+}
+
+function showLoggedIn() {
+  document.body.classList.remove("app-locked");
+  $("loginView").classList.remove("active");
+  if ($("loginMessage")) $("loginMessage").textContent = "";
+}
+
+async function sendMagicLink() {
+  const email = $("loginEmail").value.trim();
+
+  if (!email) {
+    $("loginMessage").textContent = "Enter your email first.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: getRedirectURL()
+    }
+  });
+
+  if (error) {
+    console.error("Login error:", error);
+    $("loginMessage").textContent = "Could not send login link: " + error.message;
+    return;
+  }
+
+  $("loginMessage").textContent = "Check your email for the login link.";
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  state.session = null;
+  state.leads = [];
+  render();
+  showLoggedOut("You are logged out.");
+}
+
 
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -16,7 +84,18 @@ function initApp() {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   wireEvents();
   $("followUpDate").value = todayISO();
-  loadLeads();
+
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    state.session = session;
+    if (session) {
+      showLoggedIn();
+      loadLeads();
+    } else {
+      showLoggedOut();
+    }
+  });
+
+  checkSession();
 }
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -96,6 +175,7 @@ function leadToDB(lead){
 }
 
 async function loadLeads(){
+  if (!state.session) return;
   const { data, error } = await supabaseClient.from("leads").select("*").order("follow_up_date", { ascending:true });
   if(error){ alert("Could not load leads: " + error.message); console.error(error); return; }
   state.leads = (data || []).map(dbToLead);
@@ -281,7 +361,7 @@ async function clearAllLeads(){
 }
 
 function wireEvents(){
-  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList"];
+  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList","loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn"];
   const missing=ids.filter(id=>!$(id));
   if(missing.length){ alert("Missing HTML elements: " + missing.join(", ")); return; }
   $("todayTab").onclick=()=>{ $("globalSearchInput").value=""; showView("todayView"); };
@@ -299,6 +379,12 @@ function wireEvents(){
   $("importBtn").onclick=importFile;
   $("clearAllBtn").onclick=clearAllLeads;
   $("refreshBtn").onclick=loadLeads;
+  $("sendMagicLinkBtn").onclick=sendMagicLink;
+  $("logoutBtn").onclick=logout;
+  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") sendMagicLink(); };
   $("globalSearchInput").oninput=handleGlobalSearchInput;
   $("clearGlobalSearchBtn").onclick=clearGlobalSearch;
+  $("sendMagicLinkBtn").onclick=sendMagicLink;
+  $("logoutBtn").onclick=logout;
+  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") sendMagicLink(); };
 }
