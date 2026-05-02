@@ -90,6 +90,61 @@ async function sendMagicLink() {
   $("loginMessage").textContent = "Check your email for the login link.";
 }
 
+
+async function passwordLogin() {
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+
+  if (!email || !password) {
+    $("loginMessage").textContent = "Enter your email and password.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    console.error("Password login error:", error);
+    $("loginMessage").textContent = "Login failed: " + error.message;
+    return;
+  }
+
+  $("loginMessage").textContent = "Login successful.";
+}
+
+async function createAccount() {
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+
+  if (!email || !password) {
+    $("loginMessage").textContent = "Enter your email and choose a password.";
+    return;
+  }
+
+  if (password.length < 6) {
+    $("loginMessage").textContent = "Password must be at least 6 characters.";
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: getRedirectURL()
+    }
+  });
+
+  if (error) {
+    console.error("Create account error:", error);
+    $("loginMessage").textContent = "Could not create account: " + error.message;
+    return;
+  }
+
+  $("loginMessage").textContent = "Account created. Check your email if Supabase asks you to confirm it, then login.";
+}
+
 async function logout() {
   await supabaseClient.auth.signOut();
   state.session = null;
@@ -452,13 +507,16 @@ async function checkDueNotifications(force = false) {
 }
 
 function wireEvents(){
-  const ids=["loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn","todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList"];
+  const ids=["loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn","todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList","loginPassword","passwordLoginBtn","createAccountBtn"];
   const optionalIds=["enableNotificationsBtn","testNotificationBtn","checkNotificationsBtn"];
   const missing=ids.filter(id=>!$(id));
   if(missing.length){ alert("Missing HTML elements: " + missing.join(", ")); return; }
   $("sendMagicLinkBtn").onclick=sendMagicLink;
+  $("passwordLoginBtn").onclick=passwordLogin;
+  $("createAccountBtn").onclick=createAccount;
   $("logoutBtn").onclick=logout;
-  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") sendMagicLink(); };
+  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") passwordLogin(); };
+  $("loginPassword").onkeydown=(event)=>{ if(event.key==="Enter") passwordLogin(); };
   $("todayTab").onclick=()=>{ $("globalSearchInput").value=""; showView("todayView"); };
   $("leadsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("leadsView"); };
   $("toolsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("toolsView"); };

@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <meta name="theme-color" content="#111827" />
   <title>Follow Up App</title>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 
   <style>
     .login-view { display: none; min-height: 100vh; padding: 24px 18px; align-items: center; justify-content: center; }
@@ -26,11 +26,20 @@
     <section id="loginView" class="login-view">
       <div class="card login-card">
         <h2>Login Required</h2>
-        <p class="muted-text">Enter your email and Supabase will send you a secure login link.</p>
+        <p class="muted-text">Login with your email and password. Magic link is still available as a backup.</p>
+
         <label>Email
           <input id="loginEmail" type="email" placeholder="you@example.com" />
         </label>
-        <button id="sendMagicLinkBtn" class="primary" type="button">Send Login Link</button>
+
+        <label>Password
+          <input id="loginPassword" type="password" placeholder="Enter password" />
+        </label>
+
+        <button id="passwordLoginBtn" class="primary" type="button">Login</button>
+        <button id="createAccountBtn" class="secondary-btn" type="button">Create Account</button>
+        <button id="sendMagicLinkBtn" class="secondary-btn" type="button">Send Magic Link Instead</button>
+
         <p id="loginMessage" class="muted-text"></p>
       </div>
     </section>
@@ -163,6 +172,6 @@
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
