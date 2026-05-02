@@ -36,12 +36,6 @@ function initApp() {
 
   supabaseClient.auth.onAuthStateChange((event, session) => {
     state.session = session;
-
-    if (event === "PASSWORD_RECOVERY") {
-      showPasswordResetView();
-      return;
-    }
-
     if (session) {
       showLoggedIn();
       loadLeads();
@@ -70,7 +64,6 @@ async function checkSession() {
 }
 
 function showLoggedOut(message = "") {
-  document.body.classList.remove("reset-mode");
   document.body.classList.add("app-locked");
   $("loginView").classList.add("active");
   if ($("loginMessage")) $("loginMessage").textContent = message;
@@ -78,11 +71,9 @@ function showLoggedOut(message = "") {
 }
 
 function showLoggedIn() {
-  document.body.classList.remove("reset-mode");
   document.body.classList.remove("app-locked");
   $("loginView").classList.remove("active");
   if ($("loginMessage")) $("loginMessage").textContent = "";
-  if ($("resetPasswordView")) $("resetPasswordView").classList.remove("active");
   if ($("currentUserText")) $("currentUserText").textContent = state.session?.user?.email ? `Logged in as ${state.session.user.email}` : "";
 }
 
@@ -126,10 +117,9 @@ async function passwordLogin() {
 async function createAccount() {
   const email = $("loginEmail").value.trim();
   const password = $("loginPassword").value;
-  const inviteCode = $("inviteCode").value.trim();
 
-  if (!email || !password || !inviteCode) {
-    $("loginMessage").textContent = "Enter email, password, and invite code.";
+  if (!email || !password) {
+    $("loginMessage").textContent = "Enter your email and choose a password.";
     return;
   }
 
@@ -138,34 +128,36 @@ async function createAccount() {
     return;
   }
 
-  $("loginMessage").textContent = "Creating account...";
-
-  try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/create-student-user`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_KEY}`
-      },
-      body: JSON.stringify({ email, password, inviteCode })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      $("loginMessage").textContent = result.error || "Could not create account.";
-      return;
+  const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: getRedirectURL()
     }
+  });
 
-    $("loginMessage").textContent = "Account created. Logging in...";
-    await passwordLogin();
-  } catch (error) {
+  if (error) {
     console.error("Create account error:", error);
-    $("loginMessage").textContent = "Could not reach the account creation function.";
+    $("loginMessage").textContent = "Could not create account: " + error.message;
+    return;
   }
+
+  // Try to log them in immediately after account creation.
+  const { error: loginError } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (loginError) {
+    console.error("Auto-login after signup failed:", loginError);
+    $("loginMessage").textContent = "Account created. Now click Login.";
+    return;
+  }
+
+  $("loginMessage").textContent = "Account created and logged in.";
 }
 
-async function requestPasswordReset() {
+async function resetPassword() {
   const email = $("loginEmail").value.trim();
 
   if (!email) {
@@ -178,43 +170,12 @@ async function requestPasswordReset() {
   });
 
   if (error) {
-    console.error("Password reset error:", error);
+    console.error("Reset password error:", error);
     $("loginMessage").textContent = "Could not send reset email: " + error.message;
     return;
   }
 
-  $("loginMessage").textContent = "Check your email for the password reset link.";
-}
-
-function showPasswordResetView() {
-  document.body.classList.remove("reset-mode");
-  document.body.classList.remove("app-locked");
-  document.body.classList.add("reset-mode");
-  $("loginView").classList.remove("active");
-  $("resetPasswordView").classList.add("active");
-}
-
-async function saveNewPassword() {
-  const password = $("newPassword").value;
-
-  if (!password || password.length < 6) {
-    $("resetPasswordMessage").textContent = "Password must be at least 6 characters.";
-    return;
-  }
-
-  const { error } = await supabaseClient.auth.updateUser({ password });
-
-  if (error) {
-    console.error("Update password error:", error);
-    $("resetPasswordMessage").textContent = "Could not update password: " + error.message;
-    return;
-  }
-
-  $("resetPasswordMessage").textContent = "Password updated. Loading app...";
-  document.body.classList.remove("reset-mode");
-  $("resetPasswordView").classList.remove("active");
-  showLoggedIn();
-  await loadLeads();
+  $("loginMessage").textContent = "Password reset email sent.";
 }
 
 async function logout() {
@@ -579,20 +540,17 @@ async function checkDueNotifications(force = false) {
 }
 
 function wireEvents(){
-  const ids=["loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn","todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList","loginPassword","inviteCode","passwordLoginBtn","createAccountBtn","forgotPasswordBtn","resetPasswordView","newPassword","saveNewPasswordBtn","resetPasswordMessage"];
+  const ids=["loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn","todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","contactType","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList","loginPassword","passwordLoginBtn","createAccountBtn","resetPasswordBtn"];
   const optionalIds=["enableNotificationsBtn","testNotificationBtn","checkNotificationsBtn"];
   const missing=ids.filter(id=>!$(id));
   if(missing.length){ alert("Missing HTML elements: " + missing.join(", ")); return; }
   $("sendMagicLinkBtn").onclick=sendMagicLink;
   $("passwordLoginBtn").onclick=passwordLogin;
   $("createAccountBtn").onclick=createAccount;
-  $("forgotPasswordBtn").onclick=requestPasswordReset;
-  $("saveNewPasswordBtn").onclick=saveNewPassword;
+  $("resetPasswordBtn").onclick=resetPassword;
   $("logoutBtn").onclick=logout;
   $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") passwordLogin(); };
   $("loginPassword").onkeydown=(event)=>{ if(event.key==="Enter") passwordLogin(); };
-  $("inviteCode").onkeydown=(event)=>{ if(event.key==="Enter") createAccount(); };
-  $("newPassword").onkeydown=(event)=>{ if(event.key==="Enter") saveNewPassword(); };
   $("todayTab").onclick=()=>{ $("globalSearchInput").value=""; showView("todayView"); };
   $("leadsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("leadsView"); };
   $("toolsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("toolsView"); };

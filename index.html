@@ -13,7 +13,6 @@
     .login-view.active { display: flex; }
     .login-card { width: 100%; display: grid; gap: 14px; }
     .app-locked header, .app-locked main, .app-locked nav { display: none; }
-    .reset-mode header, .reset-mode main, .reset-mode nav, .reset-mode #loginView { display: none; }
     .header-actions { display: flex; align-items: center; gap: 8px; }
     .header-logout { padding: 10px 12px; font-size: 13px; }
     .global-search-bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 16px; }
@@ -27,7 +26,7 @@
     <section id="loginView" class="login-view">
       <div class="card login-card">
         <h2>Login Required</h2>
-        <p class="muted-text">Login with email and password. New students need the class invite code one time.</p>
+        <p class="muted-text">Login with your email and password. You can also create an account or reset your password.</p>
 
         <label>Email
           <input id="loginEmail" type="email" placeholder="you@example.com" />
@@ -37,30 +36,12 @@
           <input id="loginPassword" type="password" placeholder="Enter password" />
         </label>
 
-        <label>Invite Code <span class="muted-text">(new accounts only)</span>
-          <input id="inviteCode" type="password" placeholder="Class invite code" />
-        </label>
-
         <button id="passwordLoginBtn" class="primary" type="button">Login</button>
         <button id="createAccountBtn" class="secondary-btn" type="button">Create Account</button>
-        <button id="forgotPasswordBtn" class="secondary-btn" type="button">Reset Password</button>
+        <button id="resetPasswordBtn" class="secondary-btn" type="button">Reset Password</button>
         <button id="sendMagicLinkBtn" class="secondary-btn" type="button">Send Magic Link Instead</button>
 
         <p id="loginMessage" class="muted-text"></p>
-      </div>
-    </section>
-
-    <section id="resetPasswordView" class="login-view">
-      <div class="card login-card">
-        <h2>Set New Password</h2>
-        <p class="muted-text">Enter a new password below.</p>
-
-        <label>New Password
-          <input id="newPassword" type="password" placeholder="New password" />
-        </label>
-
-        <button id="saveNewPasswordBtn" class="primary" type="button">Save New Password</button>
-        <p id="resetPasswordMessage" class="muted-text"></p>
       </div>
     </section>
 
