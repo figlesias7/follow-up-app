@@ -2,76 +2,8 @@ const SUPABASE_URL = "https://bkmrcmwmupnfcjequjlm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrbXJjbXdtdXBuZmNqZXF1amxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNzc0NjIsImV4cCI6MjA5Mjc1MzQ2Mn0.3T4cc9b-fgyQvpACHof_v03cV7hNM2BwlIOBp3gnnDY";
 
 let supabaseClient = null;
-const state = { leads: [], currentView: "todayView", selectedLeadId: null, session: null };
+const state = { leads: [], currentView: "todayView", selectedLeadId: null };
 const $ = (id) => document.getElementById(id);
-
-function getRedirectURL() {
-  return window.location.origin + window.location.pathname;
-}
-
-async function checkSession() {
-  const { data, error } = await supabaseClient.auth.getSession();
-
-  if (error) {
-    console.error("Session error:", error);
-    showLoggedOut("Could not check login session.");
-    return;
-  }
-
-  state.session = data.session;
-
-  if (state.session) {
-    showLoggedIn();
-    await loadLeads();
-  } else {
-    showLoggedOut();
-  }
-}
-
-function showLoggedOut(message = "") {
-  document.body.classList.add("app-locked");
-  $("loginView").classList.add("active");
-  if ($("loginMessage")) $("loginMessage").textContent = message;
-}
-
-function showLoggedIn() {
-  document.body.classList.remove("app-locked");
-  $("loginView").classList.remove("active");
-  if ($("loginMessage")) $("loginMessage").textContent = "";
-}
-
-async function sendMagicLink() {
-  const email = $("loginEmail").value.trim();
-
-  if (!email) {
-    $("loginMessage").textContent = "Enter your email first.";
-    return;
-  }
-
-  const { error } = await supabaseClient.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: getRedirectURL()
-    }
-  });
-
-  if (error) {
-    console.error("Login error:", error);
-    $("loginMessage").textContent = "Could not send login link: " + error.message;
-    return;
-  }
-
-  $("loginMessage").textContent = "Check your email for the login link.";
-}
-
-async function logout() {
-  await supabaseClient.auth.signOut();
-  state.session = null;
-  state.leads = [];
-  render();
-  showLoggedOut("You are logged out.");
-}
-
 
 document.addEventListener("DOMContentLoaded", initApp);
 
@@ -84,18 +16,7 @@ function initApp() {
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   wireEvents();
   $("followUpDate").value = todayISO();
-
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    state.session = session;
-    if (session) {
-      showLoggedIn();
-      loadLeads();
-    } else {
-      showLoggedOut();
-    }
-  });
-
-  checkSession();
+  loadLeads();
 }
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -103,79 +24,17 @@ function formatDate(d){ if(!d)return ""; const [y,m,day]=d.split("-"); return `$
 function isDue(l){ return l.followUpDate <= todayISO() && l.status !== "Closed" && l.status !== "Dead"; }
 function isOverdue(l){ return l.followUpDate < todayISO() && l.status !== "Closed" && l.status !== "Dead"; }
 function generateId(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2); }
-
-function getGlobalSearchText(lead) {
-  return [
-    lead.name,
-    lead.phone,
-    lead.email,
-    lead.propertyAddress,
-    lead.contactType,
-    lead.status,
-    lead.followUpDate,
-    lead.lastCompletedFollowUp,
-    lead.notes
-  ].join(" ").toLowerCase();
-}
-
-function renderGlobalSearchResults() {
-  const input = $("globalSearchInput");
-  if (!input) return;
-
-  const query = input.value.trim().toLowerCase();
-  const searchView = $("globalSearchView");
-
-  if (!query) {
-    if (searchView) searchView.classList.remove("active");
-    return;
-  }
-
-  const results = state.leads.filter(lead => getGlobalSearchText(lead).includes(query));
-  $("globalSearchCount").textContent = results.length;
-  $("globalSearchList").innerHTML = results.length
-    ? results.map(leadCardHTML).join("")
-    : `<div class="card empty">No matching leads found.</div>`;
-
-  if (searchView) searchView.classList.add("active");
-  attachLeadCardClicks("globalSearchList");
-}
-
-function handleGlobalSearchInput() {
-  const query = $("globalSearchInput").value.trim();
-
-  if (query) {
-    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-    $("globalSearchView").classList.add("active");
-    state.currentView = "globalSearchView";
-    $("todayTab").classList.remove("active");
-    $("leadsTab").classList.remove("active");
-    $("toolsTab").classList.remove("active");
-  } else {
-    $("globalSearchView").classList.remove("active");
-    showView("todayView");
-  }
-
-  renderGlobalSearchResults();
-}
-
-function clearGlobalSearch() {
-  $("globalSearchInput").value = "";
-  $("globalSearchView").classList.remove("active");
-  showView("todayView");
-}
-
 function escapeHTML(value){ return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
 function dbToLead(row){
-  return { id:row.id, name:row.name||"", phone:row.phone||"", email:row.email||"", propertyAddress:row.property_address||"", status:row.status||"New", followUpDate:row.follow_up_date||todayISO(), notes:row.notes||"", lastCompletedFollowUp:row.last_completed_follow_up||"", createdAt:row.created_at||"", updatedAt:row.updated_at||"" };
+  return { id:row.id, name:row.name||"", phone:row.phone||"", email:row.email||"", propertyAddress:row.property_address||"", status:row.status||"New", followUpDate:row.follow_up_date||todayISO(), notes:row.notes||"", lastCompletedFollowUp:row.last_completed_follow_up||"", createdAt:row.created_at||"", updatedAt:row.updated_at||"", assignedTo:row.assigned_to || "", createdBy:row.created_by || "" };
 }
 
 function leadToDB(lead){
-  return { id:lead.id, name:lead.name||"", phone:lead.phone||"", email:lead.email||"", property_address:lead.propertyAddress||"", status:lead.status||"New", follow_up_date:lead.followUpDate||todayISO(), notes:lead.notes||"", last_completed_follow_up:lead.lastCompletedFollowUp||null, updated_at:new Date().toISOString() };
+  return { id:lead.id, name:lead.name||"", phone:lead.phone||"", email:lead.email||"", property_address:lead.propertyAddress||"", status:lead.status||"New", follow_up_date:lead.followUpDate||todayISO(), notes:lead.notes||"", last_completed_follow_up:lead.lastCompletedFollowUp||null, updated_at:new Date().toISOString(), assigned_to:lead.assignedTo || state.session?.user?.id || null, created_by:lead.createdBy || state.session?.user?.id || null };
 }
 
 async function loadLeads(){
-  if (!state.session) return;
   const { data, error } = await supabaseClient.from("leads").select("*").order("follow_up_date", { ascending:true });
   if(error){ alert("Could not load leads: " + error.message); console.error(error); return; }
   state.leads = (data || []).map(dbToLead);
@@ -209,7 +68,6 @@ function render(){
   renderToday();
   renderLeadList();
   if(state.selectedLeadId && state.currentView === "detailView") renderDetail(state.selectedLeadId);
-  renderGlobalSearchResults();
 }
 
 function leadCardHTML(lead){
@@ -247,7 +105,7 @@ function renderDetail(id){
   if(!lead) return;
   $("detailName").textContent = lead.name || "Lead Detail";
   const cleanPhone = (lead.phone || "").replace(/\D/g, "");
-  $("detailCard").innerHTML = `<div class="detail-field"><div class="detail-label">Address</div><div class="detail-value">${escapeHTML(lead.propertyAddress || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Phone</div><div class="detail-value">${escapeHTML(lead.phone || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Email</div><div class="detail-value">${escapeHTML(lead.email || "Not entered")}</div></div><div class="action-grid"><a href="${cleanPhone ? `tel:${cleanPhone}` : "#"}">Call</a><a href="${cleanPhone ? `sms:${cleanPhone}` : "#"}">Text</a><a href="${lead.email ? `mailto:${lead.email}` : "#"}">Email</a></div><div class="detail-field"><div class="detail-label">Status</div><div class="detail-value">${escapeHTML(lead.status)}</div></div><div class="detail-field"><div class="detail-label">Follow-Up Date</div><div class="detail-value">${formatDate(lead.followUpDate)}</div></div><div class="detail-field"><div class="detail-label">Last Completed</div><div class="detail-value">${lead.lastCompletedFollowUp ? formatDate(lead.lastCompletedFollowUp) : "No completed follow-up yet"}</div></div><div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value">${escapeHTML(lead.notes || "No notes yet")}</div></div><div class="detail-actions"><button class="complete-btn" onclick="markComplete('${lead.id}')" type="button">Mark Complete + Tomorrow</button><button class="warning-btn" onclick="testFollowUpNow('${lead.id}')" type="button">Test Follow-Up Now</button><button class="edit-btn" onclick="editLead('${lead.id}')" type="button">Edit Lead</button><button class="delete-btn" onclick="deleteLead('${lead.id}')" type="button">Delete Lead</button></div>`;
+  $("detailCard").innerHTML = `<div class="detail-field"><div class="detail-label">Address</div><div class="detail-value">${escapeHTML(lead.propertyAddress || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Phone</div><div class="detail-value">${escapeHTML(lead.phone || "Not entered")}</div></div><div class="detail-field"><div class="detail-label">Email</div><div class="detail-value">${escapeHTML(lead.email || "Not entered")}</div></div><div class="action-grid"><a href="${cleanPhone ? `tel:${cleanPhone}` : "#"}">Call</a><a href="${cleanPhone ? `sms:${cleanPhone}` : "#"}">Text</a><a href="${lead.email ? `mailto:${lead.email}` : "#"}">Email</a></div><div class="detail-field"><div class="detail-label">Status</div><div class="detail-value">${escapeHTML(lead.status)}</div></div><div class="detail-field"><div class="detail-label">Follow-Up Date</div><div class="detail-value">${formatDate(lead.followUpDate)}</div></div><div class="detail-field"><div class="detail-label">Last Completed</div><div class="detail-value">${lead.lastCompletedFollowUp ? formatDate(lead.lastCompletedFollowUp) : "No completed follow-up yet"}</div></div><div class="detail-field"><div class="detail-label">Assigned User ID</div><div class="detail-value">${escapeHTML(lead.assignedTo || "Not assigned")}</div></div><div class="detail-field"><div class="detail-label">Notes</div><div class="detail-value">${escapeHTML(lead.notes || "No notes yet")}</div></div><div class="detail-actions"><button class="complete-btn" onclick="markComplete('${lead.id}')" type="button">Mark Complete + Tomorrow</button><button class="warning-btn" onclick="testFollowUpNow('${lead.id}')" type="button">Test Follow-Up Now</button><button class="edit-btn" onclick="editLead('${lead.id}')" type="button">Edit Lead</button><button class="delete-btn" onclick="deleteLead('${lead.id}')" type="button">Delete Lead</button></div>`;
 }
 
 function openAddForm(){
@@ -278,7 +136,7 @@ async function saveForm(event){
   event.preventDefault();
   const id = $("leadId").value || generateId();
   const oldLead = state.leads.find(item => item.id === id);
-  const lead = { id, name:$("name").value.trim(), phone:$("phone").value.trim(), email:$("email").value.trim(), propertyAddress:$("propertyAddress").value.trim(), status:$("status").value, followUpDate:$("followUpDate").value || todayISO(), notes:$("notes").value.trim(), lastCompletedFollowUp:oldLead?.lastCompletedFollowUp || "", createdAt:oldLead?.createdAt || new Date().toISOString(), updatedAt:new Date().toISOString() };
+  const lead = { id, name:$("name").value.trim(), phone:$("phone").value.trim(), email:$("email").value.trim(), propertyAddress:$("propertyAddress").value.trim(), status:$("status").value, followUpDate:$("followUpDate").value || todayISO(), notes:$("notes").value.trim(), lastCompletedFollowUp:oldLead?.lastCompletedFollowUp || "", createdAt:oldLead?.createdAt || new Date().toISOString(), updatedAt:new Date().toISOString(), assignedTo:oldLead?.assignedTo || state.session?.user?.id || "", createdBy:oldLead?.createdBy || state.session?.user?.id || "" };
   const saved = await saveLeadToDB(lead);
   if(!saved) return;
   await loadLeads();
@@ -325,7 +183,7 @@ async function deleteLead(id){
 
 function csvEscape(value){ const str = String(value ?? ""); return /[",\n\r]/.test(str) ? `"${str.replaceAll('"','""')}"` : str; }
 function downloadTextFile(content, filename, type){ const blob = new Blob([content],{type}); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href=url; link.download=filename; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); }
-function exportCSV(){ const headers=["id","name","phone","email","propertyAddress","status","followUpDate","lastCompletedFollowUp","createdAt","updatedAt","notes"]; const rows=state.leads.map(lead=>headers.map(h=>csvEscape(lead[h])).join(",")); downloadTextFile([headers.join(","),...rows].join("\n"),`follow-up-leads-${todayISO()}.csv`,"text/csv"); }
+function exportCSV(){ const headers=["id","name","phone","email","propertyAddress","status","followUpDate","lastCompletedFollowUp","createdAt","updatedAt","assignedTo","createdBy","notes"]; const rows=state.leads.map(lead=>headers.map(h=>csvEscape(lead[h])).join(",")); downloadTextFile([headers.join(","),...rows].join("\n"),`follow-up-leads-${todayISO()}.csv`,"text/csv"); }
 function exportJSON(){ downloadTextFile(JSON.stringify({app:"Follow Up App",version:"supabase-nocache",exportedAt:new Date().toISOString(),leads:state.leads},null,2),`follow-up-backup-${todayISO()}.json`,"application/json"); }
 
 function parseCSV(text){
@@ -344,7 +202,7 @@ async function importFile(){
       if(file.name.toLowerCase().endsWith(".json")){ const parsed=JSON.parse(reader.result); importedLeads=Array.isArray(parsed)?parsed:parsed.leads||[]; }
       else { const rows=parseCSV(reader.result); const headers=rows.shift().map(h=>h.trim()); importedLeads=rows.map(row=>{ const item={}; headers.forEach((h,i)=>item[h]=row[i]||""); return item; }); }
       for(const item of importedLeads){
-        const lead = { id:item.id||generateId(), name:item.name||"", phone:item.phone||"", email:item.email||"", propertyAddress:item.propertyAddress||item.property_address||"", status:item.status||"New", followUpDate:item.followUpDate||item.follow_up_date||todayISO(), notes:item.notes||"", lastCompletedFollowUp:item.lastCompletedFollowUp||item.last_completed_follow_up||"" };
+        const lead = { id:item.id||generateId(), name:item.name||"", phone:item.phone||"", email:item.email||"", propertyAddress:item.propertyAddress||item.property_address||"", status:item.status||"New", followUpDate:item.followUpDate||item.follow_up_date||todayISO(), notes:item.notes||"", lastCompletedFollowUp:item.lastCompletedFollowUp||item.last_completed_follow_up||"", assignedTo:item.assignedTo||item.assigned_to||state.session?.user?.id||"", createdBy:item.createdBy||item.created_by||state.session?.user?.id||"" };
         const saved = await saveLeadToDB(lead); if(!saved) return;
       }
       await loadLeads(); alert(`Import complete. Imported ${importedLeads.length} lead(s).`); showView("leadsView");
@@ -361,14 +219,14 @@ async function clearAllLeads(){
 }
 
 function wireEvents(){
-  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn","globalSearchInput","clearGlobalSearchBtn","globalSearchCount","globalSearchList","loginView","loginEmail","sendMagicLinkBtn","loginMessage","logoutBtn"];
+  const ids=["todayTab","leadsTab","toolsTab","addLeadBottomBtn","addLeadTopBtn","cancelFormBtn","backToLeadsBtn","leadForm","searchInput","statusFilter","exportCsvBtn","exportJsonBtn","importBtn","clearAllBtn","refreshBtn"];
   const missing=ids.filter(id=>!$(id));
   if(missing.length){ alert("Missing HTML elements: " + missing.join(", ")); return; }
-  $("todayTab").onclick=()=>{ $("globalSearchInput").value=""; showView("todayView"); };
-  $("leadsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("leadsView"); };
-  $("toolsTab").onclick=()=>{ $("globalSearchInput").value=""; showView("toolsView"); };
-  $("addLeadBottomBtn").onclick=()=>{ $("globalSearchInput").value=""; openAddForm(); };
-  $("addLeadTopBtn").onclick=()=>{ $("globalSearchInput").value=""; openAddForm(); };
+  $("todayTab").onclick=()=>showView("todayView");
+  $("leadsTab").onclick=()=>showView("leadsView");
+  $("toolsTab").onclick=()=>showView("toolsView");
+  $("addLeadBottomBtn").onclick=openAddForm;
+  $("addLeadTopBtn").onclick=openAddForm;
   $("cancelFormBtn").onclick=()=>showView("leadsView");
   $("backToLeadsBtn").onclick=()=>showView("leadsView");
   $("leadForm").onsubmit=saveForm;
@@ -379,12 +237,4 @@ function wireEvents(){
   $("importBtn").onclick=importFile;
   $("clearAllBtn").onclick=clearAllLeads;
   $("refreshBtn").onclick=loadLeads;
-  $("sendMagicLinkBtn").onclick=sendMagicLink;
-  $("logoutBtn").onclick=logout;
-  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") sendMagicLink(); };
-  $("globalSearchInput").oninput=handleGlobalSearchInput;
-  $("clearGlobalSearchBtn").onclick=clearGlobalSearch;
-  $("sendMagicLinkBtn").onclick=sendMagicLink;
-  $("logoutBtn").onclick=logout;
-  $("loginEmail").onkeydown=(event)=>{ if(event.key==="Enter") sendMagicLink(); };
 }
